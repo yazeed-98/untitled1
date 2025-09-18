@@ -8,13 +8,34 @@ class AdminOfferRequestsPage extends StatelessWidget {
   Future<bool> approveRequest(BuildContext context, DocumentSnapshot request) async {
     final data = request.data() as Map<String, dynamic>;
     try {
-      // نقل الإعلان إلى مجموعة العروض
+      final placeId = data["placeId"];
+      final placeType = data["placeType"];
+
+      if (placeId != null && placeType != null) {
+        // ✅ أضف العرض في القسم الصحيح (مثلاً restaurants/ID/offers)
+        await FirebaseFirestore.instance
+            .collection(placeType)
+            .doc(placeId)
+            .collection("offers")
+            .add({
+          "title": data["title"],
+          "description": data["description"] ?? '',
+          "placeName": data["placeName"] ?? '',
+          "city": data["city"] ?? '',
+          "image": data["image"] ?? '',
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+      }
+
+      // ✅ كمان أضف نسخة عامة في كولكشن offers (لعرض كل العروض في صفحة واحدة)
       await FirebaseFirestore.instance.collection("offers").add({
         "title": data["title"],
         "description": data["description"] ?? '',
         "placeName": data["placeName"] ?? '',
         "city": data["city"] ?? '',
         "image": data["image"] ?? '',
+        "placeId": data["placeId"],
+        "placeType": data["placeType"],
         "createdAt": FieldValue.serverTimestamp(),
       });
 
@@ -23,7 +44,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
 
       AppSnackBar.show(
         context,
-        "تمت الموافقة على الطلب",
+        "تمت الموافقة على الطلب ✅",
         backgroundColor: Theme.of(context).colorScheme.primary,
         icon: Icons.check_circle,
       );
@@ -44,7 +65,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
       await request.reference.delete();
       AppSnackBar.show(
         context,
-        "تم رفض الطلب",
+        "تم رفض الطلب ❌",
         backgroundColor: Theme.of(context).colorScheme.error,
         icon: Icons.cancel,
       );
@@ -97,43 +118,71 @@ class AdminOfferRequestsPage extends StatelessWidget {
                 final data = request.data() as Map<String, dynamic>;
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    title: Text(
-                      data["title"] ?? "",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // 🖼️ صورة العرض
+                        if ((data["image"] ?? '').isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              data["image"],
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        const SizedBox(height: 10),
+
+                        Text(
+                          data["title"] ?? "",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
                         if ((data["placeName"] ?? '').isNotEmpty)
                           Text(
                             "المكان: ${data["placeName"]}",
-                            style: TextStyle(color: Colors.blueGrey[700]),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blueGrey[700],
+                            ),
                           ),
                         if ((data["description"] ?? '').isNotEmpty)
-                          Text(
-                            data["description"],
-                            style: TextStyle(color: Colors.grey[700]),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              data["description"],
+                              style: TextStyle(color: Colors.grey[700]),
+                            ),
                           ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: "قبول",
-                          icon: Icon(Icons.check, color: colorScheme.primary),
-                          onPressed: () => approveRequest(context, request),
-                        ),
-                        IconButton(
-                          tooltip: "رفض",
-                          icon: Icon(Icons.close, color: colorScheme.error),
-                          onPressed: () => rejectRequest(context, request),
-                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              tooltip: "قبول",
+                              icon: Icon(Icons.check_circle, color: colorScheme.primary),
+                              onPressed: () => approveRequest(context, request),
+                            ),
+                            IconButton(
+                              tooltip: "رفض",
+                              icon: Icon(Icons.cancel, color: colorScheme.error),
+                              onPressed: () => rejectRequest(context, request),
+                            ),
+                          ],
+                        )
                       ],
                     ),
                   ),

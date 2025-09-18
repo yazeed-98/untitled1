@@ -1,11 +1,14 @@
+// lib/screensBottom1/GovernoratesPage.dart
 import 'package:flutter/material.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:untitled1/screensBottom1/screen2.dart';
+import 'package:untitled1/screensBottom1/screen2.dart'; // فيها CategoriesScreen
 
 class GovernoratesPage extends StatefulWidget {
-  const GovernoratesPage({super.key});
+  final bool isAdmin; // ✅ نضيف isAdmin
+
+  const GovernoratesPage({super.key, this.isAdmin = false});
 
   @override
   State<GovernoratesPage> createState() => _GovernoratesPageState();
@@ -13,7 +16,8 @@ class GovernoratesPage extends StatefulWidget {
 
 class _GovernoratesPageState extends State<GovernoratesPage> {
   final List<String> governorates = const [
-    'عمّان','إربد','الزرقاء','العقبة','الكرك','الطفيلة','مأدبا','جرش','عجلون','المفرق','معان',
+    'عمّان','إربد','الزرقاء','العقبة','الكرك',
+    'الطفيلة','مأدبا','جرش','عجلون','المفرق','معان',
   ];
 
   final TextEditingController _searchC = TextEditingController();
@@ -36,7 +40,10 @@ class _GovernoratesPageState extends State<GovernoratesPage> {
         appBar: AppBar(
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-          title: Text('اختر المحافظة', style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+          title: Text(
+            'اختر المحافظة',
+            style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+          ),
           centerTitle: true,
         ),
         body: Padding(
@@ -56,13 +63,13 @@ class _GovernoratesPageState extends State<GovernoratesPage> {
               ),
               const SizedBox(height: 8),
 
-              // Dropdown قابل للبحث
+              // Dropdown
               DropdownButton2<String>(
                 isExpanded: true,
                 hint: Text(
                   'اختر محافظة',
                   style: GoogleFonts.cairo(
-                      color: isLight ? Colors.grey[600] : cs.onSurfaceVariant
+                    color: isLight ? Colors.grey[600] : cs.onSurfaceVariant,
                   ),
                 ),
                 value: selectedGovernorate,
@@ -101,9 +108,13 @@ class _GovernoratesPageState extends State<GovernoratesPage> {
                         hintStyle: GoogleFonts.cairo(),
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
-                        fillColor: isLight ? Colors.white : cs.surfaceContainerHighest,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        fillColor: isLight
+                            ? Colors.white
+                            : cs.surfaceContainerHighest,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                         suffixIcon: _searchC.text.isNotEmpty
                             ? IconButton(
                           icon: const Icon(Icons.clear),
@@ -133,14 +144,22 @@ class _GovernoratesPageState extends State<GovernoratesPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.arrow_back_ios_new), // RTL: سهم لليسار
-                  label: Text('متابعة', style: GoogleFonts.cairo(fontSize: 16)),
+                  icon: const Icon(Icons.arrow_back_ios_new),
+                  label: Text(
+                    'متابعة',
+                    style: GoogleFonts.cairo(fontSize: 16),
+                  ),
                   onPressed: selectedGovernorate == null
                       ? null
                       : () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => CategoriesScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => CategoriesScreen(
+                          governorate: selectedGovernorate!,
+                          isAdmin: widget.isAdmin, // ✅ تمرير isAdmin
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -152,11 +171,9 @@ class _GovernoratesPageState extends State<GovernoratesPage> {
     );
   }
 
-  // بناء العناصر مع التعامل مع "لا توجد نتائج"
   List<DropdownMenuItem<String>> _buildDropdownItems() {
-    final filteredItems = governorates
-        .where((g) => g.contains(_searchC.text))
-        .toList();
+    final filteredItems =
+    governorates.where((g) => g.contains(_searchC.text)).toList();
 
     if (filteredItems.isEmpty) {
       return [
@@ -170,10 +187,12 @@ class _GovernoratesPageState extends State<GovernoratesPage> {
     }
 
     return filteredItems
-        .map((g) => DropdownMenuItem<String>(
-      value: g,
-      child: Text(g, style: GoogleFonts.cairo(fontSize: 16)),
-    ))
+        .map(
+          (g) => DropdownMenuItem<String>(
+        value: g,
+        child: Text(g, style: GoogleFonts.cairo(fontSize: 16)),
+      ),
+    )
         .toList();
   }
 }

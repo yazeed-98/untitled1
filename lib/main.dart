@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'; // ⬅️ ضروري للعربية
 import 'package:google_fonts/google_fonts.dart';
 import 'package:untitled1/regesterUser/LOginScreen.dart';
+import 'package:untitled1/screensBottom1/_HotelsPageState.dart';
+import 'package:untitled1/screensBottom1/banks.dart';
 
 // Firebase
 import 'firebase_options.dart';

@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-// Firebase
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -55,23 +52,33 @@ class _SignUpPageState extends State<SignUpPage> {
     UserCredential? cred;
 
     try {
-      final fullName   = _fullNameController.text.trim();
+      final fullName = _fullNameController.text.trim();
       final nationalId = _nationalIdController.text.trim();
-      final age        = int.parse(_ageController.text.trim());
-      final email      = _emailController.text.trim();
-      final pass       = _passController.text;
+      final ageText = _ageController.text.trim();
+      final age = int.tryParse(ageText);
 
-      // 1) إنشاء الحساب
+      if (age == null) {
+        AppSnackBar.show(
+          context,
+          'الرجاء إدخال عمر صحيح',
+          backgroundColor: Colors.red,
+          icon: Icons.error,
+        );
+        setState(() => _submitting = false);
+        return;
+      }
+
+      final email = _emailController.text.trim();
+      final pass = _passController.text;
+
+      // إنشاء الحساب
       cred = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: pass);
 
       await cred.user?.updateDisplayName(fullName);
 
-      // 2) حفظ البيانات في Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(cred.user!.uid)
-          .set({
+      // حفظ البيانات في Firestore
+      await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
         'fullName': fullName,
         'nationalId': nationalId,
         'age': age,
@@ -113,7 +120,9 @@ class _SignUpPageState extends State<SignUpPage> {
         backgroundColor: Colors.red,
         icon: Icons.error_outline,
       );
-      try { await cred?.user?.delete(); } catch (_) {}
+      try {
+        await cred?.user?.delete();
+      } catch (_) {}
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -131,69 +140,143 @@ class _SignUpPageState extends State<SignUpPage> {
           centerTitle: true,
         ),
         body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, c) => SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: c.maxHeight),
-                child: Form(
-                  key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  child: Column(
-                    children: [
-                      // باقي الحقول زي ما عندك بدون تغيير ...
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                children: [
+                  // الاسم الكامل
+                  TextFormField(
+                    controller: _fullNameController,
+                    decoration: const InputDecoration(labelText: 'الاسم الكامل'),
+                    validator: (val) =>
+                    val == null || val.trim().isEmpty ? 'الرجاء إدخال الاسم' : null,
+                  ),
+                  const SizedBox(height: 12),
 
-                      const SizedBox(height: 24),
+                  // الرقم الوطني
+                  TextFormField(
+                    controller: _nationalIdController,
+                    decoration: const InputDecoration(labelText: 'الرقم الوطني'),
+                    validator: (val) =>
+                    val == null || val.trim().isEmpty ? 'الرجاء إدخال الرقم الوطني' : null,
+                  ),
+                  const SizedBox(height: 12),
 
-                      // زر التسجيل
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _submitting ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: _submitting
-                              ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                              : const Text("تسجيل"),
+                  // العمر
+                  TextFormField(
+                    controller: _ageController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'العمر'),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'الرجاء إدخال العمر';
+                      }
+                      if (int.tryParse(val.trim()) == null) {
+                        return 'الرجاء إدخال رقم صحيح';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // البريد
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) return 'الرجاء إدخال البريد';
+                      if (!val.contains('@')) return 'بريد غير صالح';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // كلمة المرور
+                  TextFormField(
+                    controller: _passController,
+                    obscureText: _obscure1,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور',
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure1 ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscure1 = !_obscure1),
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'أدخل كلمة المرور';
+                      if (val.length < 6) return 'كلمة المرور ضعيفة';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // تأكيد كلمة المرور
+                  TextFormField(
+                    controller: _confirmPassController,
+                    obscureText: _obscure2,
+                    decoration: InputDecoration(
+                      labelText: 'تأكيد كلمة المرور',
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure2 ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscure2 = !_obscure2),
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val != _passController.text) return 'كلمتا المرور غير متطابقتين';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // زر التسجيل
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      child: _submitting
+                          ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                          : const Text("تسجيل"),
+                    ),
+                  ),
 
-                      const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('عندي حساب؟'),
-                          TextButton(
-                            onPressed: _submitting
-                                ? null
-                                : () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              );
-                            },
-                            child: const Text('تسجيل الدخول'),
-                          ),
-                        ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('عندي حساب؟'),
+                      TextButton(
+                        onPressed: _submitting
+                            ? null
+                            : () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          );
+                        },
+                        child: const Text('تسجيل الدخول'),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
           ),

@@ -1,84 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../clasess/app_snackbar.dart';
 
 class AdminRequestsPage extends StatelessWidget {
   const AdminRequestsPage({super.key});
 
-  Future<bool> approveRequest(BuildContext context, DocumentSnapshot request) async {
+  Future<void> _approveRequest(DocumentSnapshot request) async {
     final data = request.data() as Map<String, dynamic>;
+    final collectionName = data["collection"]; // الكولكشن المستهدف (restaurants, hotels...)
 
-    if (data["collection"] == null) {
-      AppSnackBar.show(
-        context,
-        "خطأ: لم يتم تحديد القسم",
-        backgroundColor: Theme.of(context).colorScheme.error,
-        icon: Icons.error,
-      );
-      return false;
-    }
+    if (collectionName == null) return;
 
-    final String targetCollection = data["collection"];
+    // أضف البيانات للكولكشن المناسب
+    await FirebaseFirestore.instance.collection(collectionName).add({
+      "name": data["name"],
+      "description": data["description"],
+      "phone": data["phone"],
+      "imageUrl": data["imageUrl"],
+      "city": data["city"] ?? '',
+      "location": data["location"] ?? '',
+      "category": data["subCategory"] ?? '',
+      "ratingCount": 0,
+      "ratingSum": 0,
+      "createdAt": FieldValue.serverTimestamp(),
+    });
 
-    try {
-      await FirebaseFirestore.instance.collection(targetCollection).add({
-        "name": data["name"],
-        "description": data["description"],
-        "approved": true,
-        "createdAt": FieldValue.serverTimestamp(),
-      });
-
-      await request.reference.delete();
-
-      AppSnackBar.show(
-        context,
-        "تمت الموافقة على الطلب",
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        icon: Icons.check_circle,
-      );
-      return true;
-    } catch (e) {
-      AppSnackBar.show(
-        context,
-        "حدث خطأ أثناء الموافقة",
-        backgroundColor: Theme.of(context).colorScheme.error,
-        icon: Icons.error,
-      );
-      return false;
-    }
+    // احذف الطلب من requests
+    await request.reference.delete();
   }
 
-  Future<bool> rejectRequest(BuildContext context, DocumentSnapshot request) async {
-    try {
-      await request.reference.delete();
-      AppSnackBar.show(
-        context,
-        "تم رفض الطلب",
-        backgroundColor: Theme.of(context).colorScheme.error,
-        icon: Icons.cancel,
-      );
-      return true;
-    } catch (e) {
-      AppSnackBar.show(
-        context,
-        "حدث خطأ أثناء الرفض",
-        backgroundColor: Theme.of(context).colorScheme.error,
-        icon: Icons.error,
-      );
-      return false;
-    }
+  Future<void> _rejectRequest(DocumentSnapshot request) async {
+    // مجرد حذف الطلب من requests
+    await request.reference.delete();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("طلبات بانتظار الموافقة"),
-          // يقرأ من الثيم
+          title: const Text("إدارة الطلبات"),
+          centerTitle: true,
         ),
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
@@ -86,53 +48,74 @@ class AdminRequestsPage extends StatelessWidget {
               .orderBy("createdAt", descending: true)
               .snapshots(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
+            if (snapshot.hasError) {
+              return const Center(child: Text("حدث خطأ أثناء تحميل الطلبات"));
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final requests = snapshot.data!.docs;
-
-            if (requests.isEmpty) {
-              return const Center(
-                child: Text(
-                  "لا يوجد طلبات جديدة",
-                  style: TextStyle(fontSize: 16),
-                ),
-              );
+            final docs = snapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return const Center(child: Text("لا توجد طلبات حالياً"));
             }
 
             return ListView.builder(
-              itemCount: requests.length,
+              padding: const EdgeInsets.all(12),
+              itemCount: docs.length,
               itemBuilder: (context, index) {
-                final request = requests[index];
-                final data = request.data() as Map<String, dynamic>;
+                final doc = docs[index];
+                final data = doc.data() as Map<String, dynamic>;
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    title: Text(
-                      data["name"] ?? "",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Text(
-                      data["description"] ?? "",
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          tooltip: "قبول",
-                          icon: Icon(Icons.check, color: colorScheme.primary),
-                          onPressed: () => approveRequest(context, request),
+                        Text(
+                          data["name"] ?? "بدون اسم",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        IconButton(
-                          tooltip: "رفض",
-                          icon: Icon(Icons.close, color: colorScheme.error),
-                          onPressed: () => rejectRequest(context, request),
+                        const SizedBox(height: 6),
+                        Text("القسم: ${data["collection"] ?? "-"}"),
+                        if ((data["subCategory"] ?? '').isNotEmpty)
+                          Text("التصنيف: ${data["subCategory"]}"),
+                        if ((data["city"] ?? '').isNotEmpty)
+                          Text("المحافظة: ${data["city"]}"),
+                        const SizedBox(height: 8),
+                        Text(data["description"] ?? ""),
+                        const SizedBox(height: 12),
+
+                        // أزرار الموافقة / الرفض
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _approveRequest(doc),
+                                icon: const Icon(Icons.check),
+                                label: const Text("موافقة"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _rejectRequest(doc),
+                                icon: const Icon(Icons.close),
+                                label: const Text("رفض"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

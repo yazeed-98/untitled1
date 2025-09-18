@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../clasess/app_snackbar.dart';
 import 'RegisterStorePage.dart';
+import 'RequestOfferPage.dart';
 
 class AdOptionsPage extends StatelessWidget {
   const AdOptionsPage({super.key});
@@ -41,13 +43,19 @@ class AdOptionsPage extends StatelessWidget {
             child: const Text("إلغاء"),
           ),
           ElevatedButton(
-            child: Text('موافق'),
+            child: const Text('موافق'),
             onPressed: () {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => StoreRegistrationPage())
+              Navigator.pop(ctx); // اغلق التنبيه أولًا
+              if (type == "ad") {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const NewOfferRequestPage()),
+                );
+              } else if (type == "store") {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const StoreRegistrationPage()),
                 );
               }
-           
-            
+            },
           ),
         ],
       ),

@@ -3,40 +3,41 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../AdOptionsPage/AdOptionsPageScreen.dart';
+// شاشات الأدمن
+import '../AdminScreens/AdminOfferPage.dart';
 import '../AdminScreens/AdminAdsPage.dart';
-import '../clasess/logOut.dart';
-import '../onlineScreen/scrrenQne.dart';
+
+
+// شاشاتك
+import '../AdOptionsPage/AdOptionsPageScreen.dart';
+import '../AdminScreens/admin_hidden_offers_page.dart';
 import '../only_sale_contract/saleScreen2.dart';
+import '../onlineScreen/scrrenQne.dart';
 import '../screensBottom1/GovernoratesPage.dart';
-
-
+import '../clasess/logOut.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  Future<bool> _checkIfAdmin() async {
+  /// 🔍 جلب بيانات المستخدم من Firestore
+  Future<Map<String, dynamic>> _getUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
+    if (user == null) return {"role": "guest"};
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
+    final doc =
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
-    if (!doc.exists) return false;
+    if (!doc.exists) return {"role": "guest"};
 
-    return doc.data()?['role'] == 'admin';
+    return doc.data() ?? {"role": "guest"};
   }
-
-
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return FutureBuilder<bool>(
-      future: _checkIfAdmin(),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getUserData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -44,13 +45,16 @@ class HomePage extends StatelessWidget {
           );
         }
 
-        final isAdmin = snapshot.data ?? false;
+        final data = snapshot.data ?? {};
+        final role = data['role'] ?? "guest";
+        final isAdmin = role == "admin";
+        final photoUrl = data['photoUrl'] as String?;
+        final name = data['name'] as String? ?? "مستخدم";
 
         return Directionality(
           textDirection: TextDirection.rtl,
           child: Scaffold(
-            backgroundColor:const Color(0xFFE0E6ED), // رمادي أغمق شوي
-
+            backgroundColor: const Color(0xFFE0E6ED),
             appBar: AppBar(
               title: Text(
                 "الصفحة الرئيسية",
@@ -64,13 +68,21 @@ class HomePage extends StatelessWidget {
                 padding: const EdgeInsets.all(8.0),
                 child: CircleAvatar(
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, color: theme.colorScheme.primary),
+                  backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                      ? NetworkImage(photoUrl)
+                      : null,
+                  child: (photoUrl == null || photoUrl.isEmpty)
+                      ? Text(
+                    name.isNotEmpty ? name[0] : "?",
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                      : null,
                 ),
               ),
-              actions: [
-                const
-                LogoutButton(),
-              ],
+              actions: const [LogoutButton()],
             ),
             body: CustomScrollView(
               slivers: [
@@ -88,7 +100,8 @@ class HomePage extends StatelessWidget {
                         "إعلانات المحلات",
                             () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => const GovernoratesPage(),
+                            builder: (context) =>
+                                GovernoratesPage(isAdmin: isAdmin),
                           ),
                         ),
                         color: Colors.blue,
@@ -99,7 +112,8 @@ class HomePage extends StatelessWidget {
                         "إعلانات Online",
                             () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => const OnlineScreen(),
+                            builder: (context) =>
+                                OnlineScreen(isAdmin: isAdmin),
                           ),
                         ),
                         color: Colors.teal,
@@ -140,29 +154,30 @@ class HomePage extends StatelessWidget {
                           ),
                           color: Colors.red,
                         ),
-                        // _buildCard(
-                          // context,
-                          // Icons.check_circle,
-                          // "الإعلانات المقبولة",
-                              // () => Navigator.of(context).push(
-                            // MaterialPageRoute(
-                            //   builder: (context) => const AdminAdsPage(),
-                            // ),
-                          // ),
-                          // color: Colors.green,
-                        // ),
-                        // _buildCard(
-                        //   context,
-                        //   Icons.cancel,
-                        //   "الإعلانات المرفوضة",
-                        //       () => Navigator.of(context).push(
-                        //     MaterialPageRoute(
-                        //       builder: (context) => const AdminRejectedAdsPage(),
-                        //     ),
-                        //   ),
-                        //   color: Colors.grey,
-                        // ),
-                      ]
+                        _buildCard(
+                          context,
+                          Icons.local_offer,
+                          "طلبات العروض",
+                              () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                              const AdminOfferRequestsPage(),
+                            ),
+                          ),
+                          color: Colors.deepOrange,
+                        ),
+                        _buildCard(
+                          context,
+                          Icons.report_problem,
+                          "إدارة البلاغات",
+                              () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AdminHiddenOffersPage(),
+                            ),
+                          ),
+                          color: Colors.brown,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -174,6 +189,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  /// 🟢 دالة مساعدة لبناء الكروت
   Widget _buildCard(
       BuildContext context,
       IconData icon,

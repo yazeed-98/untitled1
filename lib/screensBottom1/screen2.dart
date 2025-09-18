@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:untitled1/screensBottom1/restaurants_page.dart';
-
-import 'ClothingShopsPage.dart';
-import 'CraftsPage.dart';
-import 'EducationPage.dart';
-import 'MedicalPage.dart';
-import 'OrganizationsPage.dart';
-import 'WholesalePage.dart';
-
-import '_HotelsPageState.dart';
-import 'banks.dart';
-import 'cars.dart';
-import 'elctronic.dart';
+import '../clasess/CategoryFilterWidget.dart';
+import '../clasess/CustomAppBar.dart';
+import '../clasess/offers_section.dart';
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({super.key});
+  final String governorate; // المحافظة المختارة
+  final bool isAdmin;
+
+  const CategoriesScreen({
+    super.key,
+    required this.governorate,
+    this.isAdmin = false,
+  });
 
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
@@ -22,39 +19,25 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   final List<_Category> categories = const [
-    _Category('مطاعم', Icons.restaurant, Colors.teal, 'RestaurantsPage'),
-    _Category('فنادق / شقق سكنية', Icons.hotel, Colors.indigo, 'HotelsPage'),
-    _Category('محلات بيع الملابس', Icons.shopping_bag, Colors.pink, 'ClothingPage'),
-    _Category('بنوك وشركات تمويل', Icons.account_balance, Colors.blue, 'FinancePage'),
-    _Category('قسم طبي (عيادات / مستشفيات)', Icons.local_hospital, Colors.red, 'MedicalPage'),
-    _Category('الحرف اليدوية', Icons.handyman, Colors.deepOrange, 'CraftsPage'),
-    _Category('مؤسسات تعليمية', Icons.school, Colors.green, 'EducationPage'),
-    _Category('محلات بيع الجملة', Icons.shopping_cart, Colors.brown, 'WholesalePage'),
-    _Category('الإلكترونيات', Icons.devices, Colors.blueGrey, 'ElectronicsPage'),
-    _Category('الهيئات والمنظمات', Icons.groups, Colors.amber, 'OrganizationsPage'),
-    _Category('السيارات', Icons.directions_car, Colors.deepPurple, 'CarsPage'),
+    _Category('مطاعم', Icons.restaurant, Colors.teal, 'restaurants'),
+    _Category('فنادق / شقق سكنية', Icons.hotel, Colors.indigo, 'hotels'),
+    _Category('محلات بيع الملابس', Icons.shopping_bag, Colors.pink, 'clothing_shops'),
+    _Category('بنوك وشركات تمويل', Icons.account_balance, Colors.blue, 'finance_providers'),
+    _Category('قسم طبي (عيادات / مستشفيات)', Icons.local_hospital, Colors.red, 'medical'),
+    _Category('الحرف اليدوية', Icons.handyman, Colors.deepOrange, 'crafts'),
+    _Category('مؤسسات تعليمية', Icons.school, Colors.green, 'education'),
+    _Category('محلات بيع التجزئه', Icons.shopping_cart, Colors.brown, 'wholesale'),
+    _Category('الإلكترونيات', Icons.devices, Colors.blueGrey, 'electronics'),
+    _Category('الهيئات والمنظمات', Icons.groups, Colors.amber, 'organizations'),
+    _Category('السيارات', Icons.directions_car, Colors.deepPurple, 'cars'),
   ];
-
-  final Map<String, WidgetBuilder> routes = {
-    'RestaurantsPage': (_) => const RestaurantsPage(),
-    'HotelsPage': (_) => const HotelsPage(),
-    'ClothingPage': (_) => const ClothingShopsPage(),
-    'FinancePage': (_) => const FinancePage(),
-    'MedicalPage': (_) => const MedicalPage(),
-    'CraftsPage': (_) => const CraftsPage(),
-    'EducationPage': (_) => const EducationPage(),
-    'WholesalePage': (_) => const WholesalePage(),
-    'ElectronicsPage': (_) => const ElectronicsPage(),
-    'OrganizationsPage': (_) => const OrganizationsPage(),
-    'CarsPage': (_) => const CarsPage(),
-  };
 
   String query = '';
 
   @override
   Widget build(BuildContext context) {
     final q = query.trim();
-    final List<_Category> filtered = q.isEmpty
+    final filtered = q.isEmpty
         ? categories
         : categories.where((c) => c.title.contains(q)).toList();
 
@@ -98,35 +81,32 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
             // ✅ شبكة الأقسام
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, c) {
-                  final w = c.maxWidth;
-                  final cross = w >= 1100 ? 4 : (w >= 800 ? 3 : 2);
-
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: cross,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: .95,
-                    ),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final item = filtered[index];
-                      return _CategoryCard(
-                        title: item.title,
-                        icon: item.icon,
-                        color: item.color,
-                        onTap: () {
-                          final builder = routes[item.pageName];
-                          if (builder != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: builder),
-                            );
-                          }
-                        },
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: .95,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final item = filtered[index];
+                  return _CategoryCard(
+                    title: item.title,
+                    icon: item.icon,
+                    color: item.color,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GenericCategoryPage(
+                            title: item.title,
+                            collection: item.pageName,
+                            cityFilter: widget.governorate,
+                            isAdmin: widget.isAdmin,
+                          ),
+                        ),
                       );
                     },
                   );
@@ -140,16 +120,76 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 }
 
-// ✅ نموذج القسم
+// ✅ صفحة فرعية عامة لكل الأقسام
+class GenericCategoryPage extends StatefulWidget {
+  final String title;
+  final String collection;
+  final String? cityFilter;
+  final bool isAdmin;
+
+  const GenericCategoryPage({
+    super.key,
+    required this.title,
+    required this.collection,
+    this.cityFilter,
+    this.isAdmin = false,
+  });
+
+  @override
+  State<GenericCategoryPage> createState() => _GenericCategoryPageState();
+}
+
+class _GenericCategoryPageState extends State<GenericCategoryPage> {
+  String _sort = 'top';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: CustomAppBar(
+        title: widget.title,
+        actions: [
+          IconButton(
+            tooltip: "العروض",
+            icon: const Icon(Icons.local_offer_outlined, color: Colors.teal),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => OffersPage(isAdmin: widget.isAdmin)),
+              );
+            },
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'فرز',
+            onSelected: (v) => setState(() => _sort = v),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'top', child: Text('الأعلى تقييمًا')),
+              PopupMenuItem(value: 'cheap', child: Text('الأقل تكلفة')),
+              PopupMenuItem(value: 'name', child: Text('الاسم (أ-ي)')),
+            ],
+            icon: const Icon(Icons.sort, color: Colors.blue),
+          ),
+        ],
+      ),
+      body: CategoryFilterWidget(
+        collection: widget.collection,
+        cityFilter: widget.cityFilter,
+        isAdmin: widget.isAdmin,
+        sortBy: _sort,
+      ),
+    );
+  }
+}
+
+// ✅ موديل القسم
 class _Category {
   final String title;
   final IconData icon;
   final Color color;
-  final String pageName; // اسم الكلاس أو الصفحة
+  final String pageName;
   const _Category(this.title, this.icon, this.color, this.pageName);
 }
 
-// ✅ بطاقة القسم
+// ✅ بطاقة القسم (الشكل القديم المحسّن)
 class _CategoryCard extends StatefulWidget {
   final String title;
   final IconData icon;
@@ -193,14 +233,14 @@ class _CategoryCardState extends State<_CategoryCard> {
         },
         child: AnimatedScale(
           duration: const Duration(milliseconds: 120),
-          scale: _pressed ? 0.98 : 1.0,
+          scale: _pressed ? 0.97 : 1.0,
           child: Container(
             decoration: BoxDecoration(
               gradient: gradient,
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: widget.color.withOpacity(0.22),
+                  color: widget.color.withOpacity(0.25),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),

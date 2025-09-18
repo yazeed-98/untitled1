@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../clasess/starss.dart';
-import '../clasess/rating_sheet.dart';
-import '../clasess/report_dialog.dart';
+import 'edit_place_page.dart';
 import 'favorite_toggle.dart';
 
 class PlaceCard extends StatefulWidget {
   final String title;
   final String city;
   final String category;
+  final String? placeName; // 👈 اسم المكان (مطعم/فندق) إذا موجود
   final String imageUrl;
   final double rating;
   final int ratingCount;
@@ -35,6 +35,7 @@ class PlaceCard extends StatefulWidget {
     required this.onFavoriteChanged,
     required this.onTap,
     required this.ref,
+    this.placeName, // 👈 اختياري
     this.onRate,
     this.onReport,
     this.isAdmin = false,
@@ -49,8 +50,6 @@ class _PlaceCardState extends State<PlaceCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AnimatedScale(
       duration: const Duration(milliseconds: 120),
       scale: _pressed ? 0.98 : 1.0,
@@ -76,63 +75,94 @@ class _PlaceCardState extends State<PlaceCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // صورة المكان
+              // 🖼️ صورة المكان
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: widget.imageUrl.isNotEmpty
-                    ? Image.network(widget.imageUrl, height: 150, fit: BoxFit.cover)
-                    : Container(height: 150, color: Colors.grey.shade300),
+                borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+                child: (widget.imageUrl.isNotEmpty)
+                    ? Image.network(widget.imageUrl,
+                    height: 150, fit: BoxFit.cover)
+                    : Image.asset("assets/images/placeholder.png",
+                    height: 150, fit: BoxFit.cover),
               ),
 
-              // المحتوى النصي
+              // 📌 المحتوى النصي
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // الاسم
+                    // إذا فيه placeName نعرضه أولاً
+                    if ((widget.placeName ?? "").isNotEmpty)
+                      Text(
+                        widget.placeName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.bold),
+                      ),
+
+                    // العنوان
                     Text(
                       widget.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                      style: const TextStyle(
+                          fontSize: 15.5, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
-                    // المدينة والنوع
+
+                    // الموقع والتصنيف
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.blueGrey[400]),
+                        Icon(Icons.location_on,
+                            size: 16, color: Colors.blueGrey[400]),
                         const SizedBox(width: 4),
-                        Text(widget.city, style: TextStyle(color: Colors.blueGrey[700])),
+                        Text(widget.city,
+                            style: TextStyle(color: Colors.blueGrey[700])),
                         const SizedBox(width: 10),
-                        Text(widget.category, style: TextStyle(color: Colors.blueGrey[700])),
+                        Text(widget.category,
+                            style: TextStyle(color: Colors.blueGrey[700])),
                       ],
                     ),
+
                     const SizedBox(height: 8),
-                    // التقييم النجمي
+
+                    // ⭐ التقييم النجمي
                     Stars(rating: widget.rating, size: 18),
+                    const SizedBox(height: 4),
+                    Text(
+                      "(${widget.ratingCount} تقييم)",
+                      style:
+                      TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
                   ],
                 ),
               ),
 
-              // المفضلة + التقييم + البلاغ أو تعديل/حذف
+              // 🔘 أزرار حسب الدور
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Row(
-                  children: widget.isAdmin
-                      ? [
-                    // أدمن: تعديل
+                child: widget.isAdmin
+                    ? Row(
+                  children: [
+                    // زر تعديل
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.edit),
                         label: const Text("تعديل"),
                         onPressed: () {
-                          // TODO: تعديل البيانات
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  EditPlacePage(ref: widget.ref),
+                            ),
+                          );
                         },
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // أدمن: حذف
+                    // زر حذف
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.delete),
@@ -141,23 +171,28 @@ class _PlaceCardState extends State<PlaceCard> {
                           await widget.ref.delete();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("تم الحذف بنجاح")),
+                              const SnackBar(
+                                  content: Text("تم الحذف بنجاح")),
                             );
                           }
                         },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
                       ),
                     ),
-                  ]
-                      : [
-                    // مستخدم: المفضلة
+                  ],
+                )
+                    : Row(
+                  children: [
+                    // المفضلة
                     FavoriteToggle(
                       isFav: widget.isFavorite,
                       onChanged: widget.onFavoriteChanged,
                       bgColor: Colors.grey.shade200,
                     ),
                     const SizedBox(width: 10),
-                    // زر التقييم
+                    // تقييم
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.star_rate),
@@ -166,13 +201,15 @@ class _PlaceCardState extends State<PlaceCard> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // زر البلاغ
+                    // بلاغ
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.flag),
                         label: const Text("بلاغ"),
                         onPressed: widget.onReport,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
                       ),
                     ),
                   ],

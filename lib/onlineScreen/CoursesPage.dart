@@ -1,18 +1,13 @@
+// lib/screensBottom1/courses_page.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-// Widgets/Services خارجية (استبدل حسب مشروعك)
-import '../clasess/PlaceDetailsPage.dart';
-import '../clasess/card.dart' show PlaceCard;
-import '../clasess/empty_state.dart' show EmptyState;
-import '../clasess/SearchField.dart' show SearchField;
+import '../clasess/CustomAppBar.dart';
+import '../clasess/offersDetail.dart';
 import '../clasess/offers_section.dart';
-import '../clasess/rating_sheet.dart' show RatingService;
-import '../clasess/report_dialog.dart' show ReportService;
-import 'StoresScreen.dart';
+import '../clasess/CategoryFilterWidget.dart';
 
 class CoursesPage extends StatefulWidget {
   const CoursesPage({super.key, this.isAdmin = false});
+
   final bool isAdmin;
 
   @override
@@ -20,55 +15,24 @@ class CoursesPage extends StatefulWidget {
 }
 
 class _CoursesPageState extends State<CoursesPage> {
-  String _query = '';
-  String _sort = 'top'; // top | cheap | name
-  String? _selectedCategory;
-
-  // 🔹 أنواع الدورات
-  final List<String> _categories = const [
-    'برمجة',
-    'تداول',
-    'تسويق',
-    'لغات',
-    'أخرى',
-  ];
-
-  final Set<String> _favs = {};
-
-  Stream<QuerySnapshot<Map<String, dynamic>>> _stream() {
-    Query<Map<String, dynamic>> col =
-    FirebaseFirestore.instance.collection('courses'); // 👈 مجموعة خاصة بالدورات
-    if (_selectedCategory != null) {
-      col = col.where('category', isEqualTo: _selectedCategory);
-    }
-    return col.snapshots();
-  }
+  String _sort = 'top';
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F8FC),
-        appBar: AppBar(
-          title: const Text('التعليم والتدريب الأونلاين'),
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.blueGrey[900],
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new),
-            onPressed: () => Navigator.of(context).maybePop(),
-            tooltip: 'رجوع',
-          ),
+        appBar: CustomAppBar(
+          title: 'التعليم والتدريب الأونلاين',
           actions: [
             IconButton(
               tooltip: "العروض",
-              icon: const Icon(Icons.local_offer_outlined),
+              icon: const Icon(Icons.local_offer_outlined,
+              color: Colors.green,),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const OffersPage()),
+                  MaterialPageRoute(builder: (_) => OffersPage(isAdmin: widget.isAdmin)),
                 );
               },
             ),
@@ -80,237 +44,16 @@ class _CoursesPageState extends State<CoursesPage> {
                 PopupMenuItem(value: 'cheap', child: Text('الأرخص')),
                 PopupMenuItem(value: 'name', child: Text('الاسم (أ-ي)')),
               ],
-              icon: const Icon(Icons.sort),
+              icon: const Icon(Icons.sort, color: Colors.blue),
             ),
           ],
         ),
-
-        body: Column(
-          children: [
-            // 🔍 البحث
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: SearchField(
-                hintText: 'ابحث باسم الدورة…',
-                onChanged: (v) => setState(() => _query = v.trim()),
-              ),
-            ),
-
-            // 🔹 فلاتر النوع
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                height: 42,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, i) {
-                    if (i == 0) {
-                      final sel = _selectedCategory == null;
-                      return ChoiceChip(
-                        label: Text(
-                          'الكل',
-                          style: TextStyle(
-                            color: sel ? Colors.white : Colors.blueGrey[800],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        selected: sel,
-                        selectedColor: Colors.blueAccent,
-                        backgroundColor: Colors.grey[200],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(
-                            color: sel ? Colors.blueAccent : Colors.grey.shade400,
-                            width: 1,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = null),
-                      );
-                    }
-                    final cat = _categories[i - 1];
-                    return ChoiceChip(
-                      label: Text(
-                        cat,
-                        style: TextStyle(
-                          color: _selectedCategory == cat
-                              ? Colors.white
-                              : Colors.blueGrey[800],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      selected: _selectedCategory == cat,
-                      selectedColor: Colors.blueAccent,
-                      backgroundColor: Colors.grey[200],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: _selectedCategory == cat
-                              ? Colors.blueAccent
-                              : Colors.grey.shade400,
-                          width: 1,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      onSelected: (_) =>
-                          setState(() => _selectedCategory = cat),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // 📋 قائمة الدورات
-            Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: _stream(),
-                builder: (context, snap) {
-                  if (snap.hasError) {
-                    return const EmptyState(
-                      icon: Icons.error_outline,
-                      title: 'تعذّر تحميل البيانات',
-                      subtitle: 'تحقق من الاتصال أو صلاحيات Firestore.',
-                    );
-                  }
-
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final docs = snap.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.school,
-                      title: 'لا توجد دورات',
-                      subtitle: 'جرّب تعديل البحث أو الفلاتر.',
-                    );
-                  }
-
-                  final list = docs.map((d) {
-                    final m = {...d.data()!};
-                    m['id'] = d.id;
-                    m['ref'] = d.reference;
-                    return m;
-                  }).toList();
-
-                  // فلترة بالبحث
-                  final filtered = list.where((c) {
-                    final nameOk = (c['name'] ?? '')
-                        .toString()
-                        .toLowerCase()
-                        .contains(_query.toLowerCase());
-                    return nameOk;
-                  }).toList();
-
-                  // فرز
-                  filtered.sort((a, b) {
-                    switch (_sort) {
-                      case 'cheap':
-                        final ap = (a['price'] as num?) ?? 1;
-                        final bp = (b['price'] as num?) ?? 1;
-                        return ap.compareTo(bp);
-                      case 'name':
-                        return ((a['name'] ?? '') as String)
-                            .compareTo((b['name'] ?? '') as String);
-                      case 'top':
-                      default:
-                        final ar = _avg(a);
-                        final br = _avg(b);
-                        return br.compareTo(ar);
-                    }
-                  });
-
-                  if (filtered.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.school,
-                      title: 'لا توجد نتائج مطابقة',
-                      subtitle: 'جرّب تعديل البحث أو الفلاتر.',
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, i) {
-                      final c = filtered[i];
-                      final avg = _avg(c);
-                      final id = c['id'] as String;
-                      final ref =
-                      c['ref'] as DocumentReference<Map<String, dynamic>>;
-
-                      return PlaceCard(
-                        title: (c['name'] ?? '') as String,
-                        city: (c['instructor'] ?? '') as String, // 👈 اسم المدرّس
-                        category: (c['category'] ?? '') as String,
-
-                        imageUrl: (c['image'] ?? '') as String,
-                        rating: avg,
-                        ratingCount: (c['ratingCount'] as int?) ?? 0,
-                        isFavorite: _favs.contains(id),
-                        onFavoriteChanged: (v) => setState(() {
-                          v ? _favs.add(id) : _favs.remove(id);
-                        }),
-                        ref: ref,
-                        isAdmin: widget.isAdmin,
-
-                        // ✅ تقييم
-                        onRate: () => RatingService.rateRestaurant(
-                          context,
-                          ref: ref,
-                          placeName: (c['name'] ?? '') as String,
-                        ),
-
-                        // ✅ إبلاغ
-                        onReport: () => ReportService.reportPlace(
-                          context,
-                          placeType: 'course',
-                          placeId: id,
-                          placeName: (c['name'] ?? '') as String,
-                        ),
-
-                        // ✅ تفاصيل الدورة
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PlaceDetailsPage(placeData: c),
-
-
-                              ));
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+        body: CategoryFilterWidget(
+          collection: 'courses',
+          isAdmin: widget.isAdmin,
+          sortBy: _sort,
         ),
       ),
     );
-  }
-
-  // متوسط التقييم
-  double _avg(Map<String, dynamic> m) {
-    final int count = (m['ratingCount'] as int?) ?? 0;
-    final double sum = ((m['ratingSum'] as num?)?.toDouble()) ?? 0.0;
-    return count == 0 ? 0.0 : sum / count;
   }
 }

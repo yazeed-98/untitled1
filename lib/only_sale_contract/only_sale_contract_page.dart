@@ -4,8 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart' as intl;
 
-import '../clasess/app_snackbar.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
+import '../clasess/app_snackbar.dart';
 
 class NameOnlySaleContractPage extends StatefulWidget {
   final String? contractId;
@@ -26,6 +29,8 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
   final _itemDesc = TextEditingController();
   final _price = TextEditingController();
   final _city = TextEditingController();
+  final _sellerNationalId = TextEditingController();
+  final _buyerNationalId = TextEditingController();
 
   bool _agreeSeller = false;
   bool _agreeBuyer = false;
@@ -39,6 +44,8 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
     _itemDesc.dispose();
     _price.dispose();
     _city.dispose();
+    _sellerNationalId.dispose();
+    _buyerNationalId.dispose();
     super.dispose();
   }
 
@@ -57,6 +64,8 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
     final contractData = {
       "sellerName": _sellerName.text,
       "buyerName": _buyerName.text,
+      "sellerNationalId": _sellerNationalId.text,
+      "buyerNationalId": _buyerNationalId.text,
       "itemDescription": _itemDesc.text,
       "price": _price.text,
       "city": _city.text,
@@ -81,10 +90,10 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         icon: Icons.check_circle);
 
-    _showContractOptions();
+    _showContractOptions(contractData);
   }
 
-  void _showContractOptions() {
+  void _showContractOptions(Map<String, dynamic> data) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -95,12 +104,12 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
         child: Wrap(
           children: [
             ListTile(
-              leading: Icon(Icons.share,
+              leading: Icon(Icons.picture_as_pdf,
                   color: Theme.of(context).colorScheme.primary),
-              title: const Text("مشاركة العقد"),
+              title: const Text("توليد ومشاركة PDF"),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: مشاركة العقد
+                _generatePdf(data);
               },
             ),
             ListTile(
@@ -115,8 +124,55 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
     );
   }
 
+  /// 🖨️ إنشاء PDF
+  Future<void> _generatePdf(Map<String, dynamic> data) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(
+                  child: pw.Text("عقد بيع",
+                      style: pw.TextStyle(
+                          fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text("اسم البائع: ${data['sellerName']}"),
+                pw.Text("الرقم الوطني للبائع: ${data['sellerNationalId']}"),
+                pw.Text("اسم المشتري: ${data['buyerName']}"),
+                pw.Text("الرقم الوطني للمشتري: ${data['buyerNationalId']}"),
+                pw.SizedBox(height: 10),
+                pw.Text("الوصف: ${data['itemDescription']}"),
+                pw.Text("السعر: ${data['price']}"),
+                pw.Text("المدينة: ${data['city']}"),
+                pw.SizedBox(height: 10),
+                pw.Text("توقيع البائع: ${data['sellerSignature']}"),
+                pw.Text("توقيع المشتري: ${data['buyerSignature']}"),
+                pw.SizedBox(height: 20),
+                pw.Text("التاريخ: ${data['date']}"),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: 'sale_contract.pdf',
+    );
+  }
+
   Widget _field(String label, TextEditingController c,
-      {int maxLines = 1, bool required = false, TextInputType? keyboard}) {
+      {int maxLines = 1,
+        bool required = false,
+        TextInputType? keyboard}) {
     final colors = Theme.of(context).colorScheme;
 
     return TextFormField(
@@ -162,7 +218,13 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
                 children: [
                   _field("اسم البائع", _sellerName, required: true),
                   const SizedBox(height: 12),
+                  _field("الرقم الوطني للبائع", _sellerNationalId,
+                      keyboard: TextInputType.number, required: true),
+                  const SizedBox(height: 12),
                   _field("اسم المشتري", _buyerName, required: true),
+                  const SizedBox(height: 12),
+                  _field("الرقم الوطني للمشتري", _buyerNationalId,
+                      keyboard: TextInputType.number, required: true),
                   const SizedBox(height: 12),
                   _field("وصف المبيع", _itemDesc, maxLines: 3, required: true),
                   const SizedBox(height: 12),
@@ -176,29 +238,19 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
                   _field("توقيع المشتري (بالاسم)", _buyerSign, required: true),
                   const SizedBox(height: 20),
 
-                  // 📝 نصوص الشروط داخل Card
+                  // ✅ الشروط
                   Card(
                     color: colors.surfaceVariant,
                     margin: const EdgeInsets.only(bottom: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "الشروط والأحكام:",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        "الشروط والأحكام:\n"
                             "1- يلتزم البائع بتسليم المبيع بالحالة المتفق عليها.\n"
-                                "2- يلتزم المشتري بدفع المبلغ المتفق عليه كاملاً.\n"
-                                "3- يعتبر توقيع الطرفين إقراراً بالقبول بجميع البنود.",
-                          ),
-                        ],
+                            "2- يلتزم المشتري بدفع المبلغ المتفق عليه كاملاً.\n"
+                            "3- يعتبر توقيع الطرفين إقراراً بالقبول بجميع البنود.",
                       ),
                     ),
                   ),
@@ -208,7 +260,6 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
                     onChanged: (v) =>
                         setState(() => _agreeSeller = v ?? false),
                     title: const Text("أُقر أنا البائع بموافقتي على الشروط"),
-                    controlAffinity: ListTileControlAffinity.leading,
                     activeColor: colors.primary,
                   ),
                   CheckboxListTile(
@@ -216,7 +267,6 @@ class _NameOnlySaleContractPageState extends State<NameOnlySaleContractPage> {
                     onChanged: (v) =>
                         setState(() => _agreeBuyer = v ?? false),
                     title: const Text("أُقر أنا المشتري بموافقتي على الشروط"),
-                    controlAffinity: ListTileControlAffinity.leading,
                     activeColor: colors.primary,
                   ),
 

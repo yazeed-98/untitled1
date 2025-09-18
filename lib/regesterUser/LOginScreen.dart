@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../enterScreenUserAndAdmin/screenOne.dart';
-import '../screensBottom1/GovernoratesPage.dart';
-import 'Regester.dart';
+import '../enterScreenUserAndAdmin/screenOne.dart'; // صفحة الأدمن
+import '../screensBottom1/GovernoratesPage.dart';   // صفحة المستخدم
+import 'Regester.dart'; // صفحة إنشاء حساب
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.nextPageBuilder});
@@ -53,8 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _showSnack('جاري تسجيل الدخول...', Colors.teal.shade600, ms: 1200);
 
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
@@ -67,14 +66,24 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("لا يوجد بيانات للمستخدم");
       }
 
+      final role = doc['role'] ?? 'user'; // 🟢 جلب الدور من Firestore
+
       _showSnack('تم تسجيل الدخول بنجاح', Colors.green.shade700, ms: 1200);
 
       await Future.delayed(const Duration(milliseconds: 200));
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+
+      // 🟢 التوجيه حسب الدور
+      if (role == 'admin') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()), // صفحة الأدمن
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()), // صفحة المستخدم
+        );
+      }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _showSnack(

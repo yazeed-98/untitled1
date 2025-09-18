@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ReportResult {
@@ -64,40 +62,5 @@ class ReportDialog {
         ),
       ),
     );
-  }
-}
-class ReportService {
-  static Future<void> reportPlace(
-      BuildContext context, {
-        required String placeType,  // hotel, restaurant, car, ...
-        required String placeId,
-        required String placeName,
-      }) async {
-    final res = await ReportDialog.show(context, placeName: placeName);
-    if (res == null) return;
-
-    try {
-      await FirebaseFirestore.instance.collection('reports').add({
-        'placeType': placeType,
-        'placeId': placeId,
-        'placeName': placeName,
-        'type': res.type,
-        'details': res.details ?? '',
-        'uid': FirebaseAuth.instance.currentUser?.uid,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إرسال البلاغ، شكرًا لتنبيهك 🙏')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تعذّر إرسال البلاغ: $e')),
-        );
-      }
-    }
   }
 }

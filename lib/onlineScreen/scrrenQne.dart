@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'CoursesPage.dart';
+import 'StoresScreen.dart';
+import 'digitalServices.dart';
+
 class OnlineScreen extends StatefulWidget {
-  const OnlineScreen({super.key});
+  const OnlineScreen({super.key, required bool isAdmin});
 
   @override
   State<OnlineScreen> createState() => _OnlineScreenState();
@@ -85,19 +89,24 @@ class _OnlineScreenState extends State<OnlineScreen> {
                         icon: item.icon,
                         color: item.color,
                         onTap: () {
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                content: Text('فتح قسم: ${item.title}'),
-                                behavior: SnackBarBehavior.floating,
-                                margin: const EdgeInsets.all(12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
+                          if (item.title == 'المتاجر الإلكترونية') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const OnlineStoresPage()),
                             );
+                          } else if (item.title == 'التعليم والتدريب الأونلاين') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const CoursesPage()),
+                            );
+                          } else if (item.title == 'الخدمات الرقمية') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const DigitalServicesPage()),
+                            );
+                          }
                         },
+
                       );
                     },
                   );

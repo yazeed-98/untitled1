@@ -1,7 +1,7 @@
 // lib/screens/contracts_list_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart' as intl; // <- استيراد مع prefix
+import 'package:intl/intl.dart' as intl;
 
 import 'only_sale_contract_page.dart';
 
@@ -15,7 +15,7 @@ class ContractsListPage extends StatelessWidget {
         .orderBy('createdAt', descending: true);
 
     return Directionality(
-      textDirection: TextDirection.rtl, // <- تأكد small-case "rtl"
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(title: const Text('عقودي')),
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -49,7 +49,7 @@ class ContractsListPage extends StatelessWidget {
 
                 final type = (m['type'] ?? '-').toString();
                 final city = (m['city'] ?? '-').toString();
-                final price = (m['price'] ?? 0).toString();
+                final price = (m['price'] ?? '').toString();
                 final currency = (m['currency'] ?? '').toString();
                 final status = (m['status'] ?? '').toString();
 
@@ -88,17 +88,14 @@ class ContractsListPage extends StatelessWidget {
                             spacing: 6,
                             runSpacing: -6,
                             children: [
-                              Chip(
-                                label: Text('السعر: $price'),
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withOpacity(0.1),
-                              ),
-                              if (currency.isNotEmpty)
+                              if (price.isNotEmpty)
                                 Chip(
-                                  label: Text('العملة: $currency'),
-                                  backgroundColor: Colors.blue.shade50,
+                                  label: Text(
+                                    currency.isNotEmpty
+                                        ? 'السعر: $price $currency'
+                                        : 'السعر: $price',
+                                  ),
+                                  backgroundColor: Colors.orange.shade50,
                                 ),
                               if (status.isNotEmpty)
                                 Chip(
@@ -178,38 +175,74 @@ class ContractsListPage extends StatelessWidget {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.visibility),
+              leading: const Icon(Icons.visibility, color: Colors.blue),
               title: const Text('عرض العقد'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => NameOnlySaleContractPage(contractId: id),
+                    builder: (_) =>
+                        NameOnlySaleContractPage(contractId: id),
                   ),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.edit),
+              leading: const Icon(Icons.edit, color: Colors.orange),
               title: const Text('تعديل'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: افتح صفحة التعديل (نفس صفحة العقد لكن editable)
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => NameOnlySaleContractPage(
+                      contractId: id,
+                      // 🟢 نضيف باراميتر isEditable للصفحة
+                      // isEditable: true,
+                    ),
+                  ),
+                );
               },
             ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('حذف'),
               onTap: () async {
-                await FirebaseFirestore.instance
-                    .collection('contracts')
-                    .doc(id)
-                    .delete();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تم حذف العقد')),
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('تأكيد الحذف'),
+                    content:
+                    const Text('هل أنت متأكد من حذف هذا العقد نهائياً؟'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('إلغاء'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('حذف'),
+                      ),
+                    ],
+                  ),
                 );
+                if (confirm == true) {
+                  await FirebaseFirestore.instance
+                      .collection('contracts')
+                      .doc(id)
+                      .delete();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم حذف العقد')),
+                    );
+                  }
+                }
               },
             ),
           ],
