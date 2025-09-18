@@ -5,6 +5,7 @@ import '../clasess/app_snackbar.dart';
 class AdminOfferRequestsPage extends StatelessWidget {
   const AdminOfferRequestsPage({super.key});
 
+  /// ✅ الموافقة على طلب عرض
   Future<bool> approveRequest(BuildContext context, DocumentSnapshot request) async {
     final data = request.data() as Map<String, dynamic>;
     try {
@@ -12,7 +13,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
       final placeType = data["placeType"];
 
       if (placeId != null && placeType != null) {
-        // ✅ أضف العرض في القسم الصحيح (مثلاً restaurants/ID/offers)
+        // 🔹 إضافة العرض داخل المكان نفسه (مثلاً: restaurants/{placeId}/offers)
         await FirebaseFirestore.instance
             .collection(placeType)
             .doc(placeId)
@@ -27,7 +28,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
         });
       }
 
-      // ✅ كمان أضف نسخة عامة في كولكشن offers (لعرض كل العروض في صفحة واحدة)
+      // 🔹 إضافة نسخة عامة في كولكشن العروض
       await FirebaseFirestore.instance.collection("offers").add({
         "title": data["title"],
         "description": data["description"] ?? '',
@@ -39,12 +40,12 @@ class AdminOfferRequestsPage extends StatelessWidget {
         "createdAt": FieldValue.serverTimestamp(),
       });
 
-      // حذف الطلب بعد الموافقة
+      // 🗑️ حذف الطلب بعد الموافقة
       await request.reference.delete();
 
       AppSnackBar.show(
         context,
-        "تمت الموافقة على الطلب ✅",
+        "تمت الموافقة على العرض ✅",
         backgroundColor: Theme.of(context).colorScheme.primary,
         icon: Icons.check_circle,
       );
@@ -52,7 +53,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
     } catch (e) {
       AppSnackBar.show(
         context,
-        "حدث خطأ أثناء الموافقة",
+        "حدث خطأ أثناء الموافقة: $e",
         backgroundColor: Theme.of(context).colorScheme.error,
         icon: Icons.error,
       );
@@ -60,6 +61,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
     }
   }
 
+  /// ❌ رفض الطلب
   Future<bool> rejectRequest(BuildContext context, DocumentSnapshot request) async {
     try {
       await request.reference.delete();
@@ -73,7 +75,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
     } catch (e) {
       AppSnackBar.show(
         context,
-        "حدث خطأ أثناء الرفض",
+        "حدث خطأ أثناء الرفض: $e",
         backgroundColor: Theme.of(context).colorScheme.error,
         icon: Icons.error,
       );
@@ -89,7 +91,8 @@ class AdminOfferRequestsPage extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("طلبات الإعلانات"),
+          title: const Text("طلبات العروض"),
+          centerTitle: true,
         ),
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
@@ -112,13 +115,14 @@ class AdminOfferRequestsPage extends StatelessWidget {
             }
 
             return ListView.builder(
+              padding: const EdgeInsets.all(12),
               itemCount: requests.length,
               itemBuilder: (context, index) {
                 final request = requests[index];
                 final data = request.data() as Map<String, dynamic>;
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  margin: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -140,6 +144,7 @@ class AdminOfferRequestsPage extends StatelessWidget {
                           ),
                         const SizedBox(height: 10),
 
+                        // 📝 العنوان
                         Text(
                           data["title"] ?? "",
                           style: const TextStyle(
@@ -147,16 +152,20 @@ class AdminOfferRequestsPage extends StatelessWidget {
                             fontSize: 18,
                           ),
                         ),
+
                         const SizedBox(height: 6),
 
+                        // 📍 المكان
                         if ((data["placeName"] ?? '').isNotEmpty)
                           Text(
-                            "المكان: ${data["placeName"]}",
+                            "📍 ${data["placeName"]}",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.blueGrey[700],
                             ),
                           ),
+
+                        // 📄 الوصف
                         if ((data["description"] ?? '').isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 4.0),
@@ -168,17 +177,20 @@ class AdminOfferRequestsPage extends StatelessWidget {
 
                         const SizedBox(height: 12),
 
+                        // ✅❌ أزرار الموافقة والرفض
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             IconButton(
                               tooltip: "قبول",
-                              icon: Icon(Icons.check_circle, color: colorScheme.primary),
+                              icon: Icon(Icons.check_circle,
+                                  color: colorScheme.primary),
                               onPressed: () => approveRequest(context, request),
                             ),
                             IconButton(
                               tooltip: "رفض",
-                              icon: Icon(Icons.cancel, color: colorScheme.error),
+                              icon: Icon(Icons.cancel,
+                                  color: colorScheme.error),
                               onPressed: () => rejectRequest(context, request),
                             ),
                           ],

@@ -24,9 +24,9 @@ class OffersFilteredPage extends StatelessWidget {
         ),
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
-              .collection("offers")
-              .where("placeId", isEqualTo: placeId)
-              .where("placeType", isEqualTo: placeType)
+              .collection(placeType)       // 🔹 القسم (مطاعم/فنادق...)
+              .doc(placeId)               // 🔹 ID المكان
+              .collection("offers")       // 🔹 عروض هذا المكان
               .orderBy("createdAt", descending: true)
               .snapshots(),
           builder: (context, snapshot) {
@@ -34,7 +34,12 @@ class OffersFilteredPage extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text("لا يوجد عروض لهذا المكان حالياً"));
+              return const Center(
+                child: Text(
+                  "لا يوجد عروض لهذا المكان حالياً",
+                  style: TextStyle(fontSize: 16),
+                ),
+              );
             }
 
             final docs = snapshot.data!.docs;
@@ -48,30 +53,45 @@ class OffersFilteredPage extends StatelessWidget {
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    leading: (data['image'] ?? '').toString().isNotEmpty
-                        ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        data['image'],
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                        : const Icon(Icons.local_offer, size: 40, color: Colors.blue),
-                    title: Text(
-                      data['title'] ?? '',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Text(
-                      data['description'] ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 🖼️ صورة العرض
+                        if ((data['image'] ?? '').toString().isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              data['image'],
+                              height: 180,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+
+                        const SizedBox(height: 10),
+
+                        // 📝 العنوان
+                        Text(
+                          data['title'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // 📄 الوصف
+                        if ((data['description'] ?? '').toString().isNotEmpty)
+                          Text(
+                            data['description'],
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                      ],
                     ),
                   ),
                 );
